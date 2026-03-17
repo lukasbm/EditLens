@@ -5,8 +5,8 @@ This is the accompanying repository for the ICLR 2026 paper [EditLens: Quantifyi
 ## Links
 
 - **Paper:** [arXiv:2510.03154](https://arxiv.org/abs/2510.03154)
-- **Models:** [pangram/models](https://huggingface.co/pangram/models)
-- **Dataset:** [pangram/editlens_iclr](https://huggingface.co/datasets/pangram/editlens_iclr)
+- **Models:** [pangram/models on HuggingFace](https://huggingface.co/pangram/models)
+- **Dataset:** [pangram/editlens_iclr on HuggingFace](https://huggingface.co/datasets/pangram/editlens_iclr)
 
 ## Setup
 
