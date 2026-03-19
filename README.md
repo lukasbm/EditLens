@@ -76,13 +76,15 @@ score = cosine_distance(text1, text2, model_name="Qwen/Qwen3-Embedding-0.6B")
 
 ### Soft N-Gram Score
 
-Measures how much of the edited text's phrase content is new relative to the source. Extracts word n-grams (length 6–12) from both texts, embeds them, and computes what fraction of edited-text phrases have no near-match in the source. Returns a value in [0, 1] where 0 = fully overlapping and 1 = no overlap.
+Measures how much of the edited text's phrase content is new relative to the source. Extracts word n-grams from both texts, embeds them, and computes what fraction of edited-text phrases have no semantic match in the source. Returns a value in [0, 1] where 0 = fully overlapping and 1 = no overlap.
 
 ```bash
 python scripts/scoring/soft_ngrams.py \
   --source_text "The original text" \
   --edited_text "The edited text" \
-  --threshold 0.8
+  --threshold 0.8 \
+  --min_length 6 \
+  --max_length 12
 ```
 
 Or from Python:
@@ -90,7 +92,7 @@ Or from Python:
 ```python
 from scripts.scoring.soft_ngrams import soft_ngram_score
 
-score = soft_ngram_score(source_text, edited_text, threshold=0.8)
+score = soft_ngram_score(source_text, edited_text, threshold=0.8, min_length=6, max_length=12)
 ```
 
 ## Citation

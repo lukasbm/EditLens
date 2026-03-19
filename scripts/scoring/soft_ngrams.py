@@ -7,7 +7,7 @@ score where 0 = fully overlapping and 1 = no overlap.
 
 Usage:
   python scripts/scoring/soft_ngrams.py --source_text "The quick brown fox" --edited_text "A fast brown fox"
-  python scripts/scoring/soft_ngrams.py --source_text "..." --edited_text "..." --threshold 0.9
+  python scripts/scoring/soft_ngrams.py --source_text "..." --edited_text "..." --threshold 0.9 --min_length 4 --max_length 10
 """
 
 import argparse
@@ -33,6 +33,8 @@ def soft_ngram_score(
     edited_text: str,
     model_name: str = "all-MiniLM-L6-v2",
     threshold: float = 0.8,
+    min_length: int = 6,
+    max_length: int = 12,
     batch_size: int = 32,
 ) -> float:
     """Compute soft n-gram distance between source and edited text.
@@ -42,6 +44,8 @@ def soft_ngram_score(
         edited_text: Edited/generated text.
         model_name: HuggingFace sentence-transformers model ID.
         threshold: Cosine similarity threshold for counting a phrase as matched.
+        min_length: Minimum n-gram length in words.
+        max_length: Maximum n-gram length in words.
         batch_size: Encoding batch size.
 
     Returns:
@@ -50,8 +54,8 @@ def soft_ngram_score(
     """
     model = SentenceTransformer(model_name, model_kwargs={"dtype": "auto"})
 
-    source_phrases = get_phrases(source_text)
-    edited_phrases = get_phrases(edited_text)
+    source_phrases = get_phrases(source_text, min_length=min_length, max_length=max_length)
+    edited_phrases = get_phrases(edited_text, min_length=min_length, max_length=max_length)
 
     if not source_phrases or not edited_phrases:
         return 1.0
@@ -80,6 +84,8 @@ def main():
     parser.add_argument("--source_text", required=True)
     parser.add_argument("--edited_text", required=True)
     parser.add_argument("--threshold", type=float, default=0.8, help="Similarity threshold (default: 0.8)")
+    parser.add_argument("--min_length", type=int, default=6, help="Minimum n-gram length in words (default: 6)")
+    parser.add_argument("--max_length", type=int, default=12, help="Maximum n-gram length in words (default: 12)")
     parser.add_argument(
         "--model",
         default="all-MiniLM-L6-v2",
@@ -87,7 +93,14 @@ def main():
     )
     args = parser.parse_args()
 
-    score = soft_ngram_score(args.source_text, args.edited_text, model_name=args.model, threshold=args.threshold)
+    score = soft_ngram_score(
+        args.source_text,
+        args.edited_text,
+        model_name=args.model,
+        threshold=args.threshold,
+        min_length=args.min_length,
+        max_length=args.max_length,
+    )
     print(f"Soft n-gram distance: {score:.6f}")
 
 
