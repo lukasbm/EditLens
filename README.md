@@ -51,6 +51,50 @@ python scripts/inference.py \
 
 You can train an EditLens model with any number of classification buckets! This script will infer the num_buckets hyperparameter automatically from the model checkpoint.
 
+## Scoring
+
+The `scripts/scoring/` directory contains standalone scripts for computing the two text-distance metrics described in the paper. These require the `sentence-transformers` package (included in `requirements.txt`).
+
+### Cosine Distance
+
+Computes cosine distance between two texts using a sentence embedding model. Returns a value where 0 = identical.
+
+```bash
+python scripts/scoring/cosine_distance.py \
+  --text1 "The original text" \
+  --text2 "The edited text" \
+  --model_name Qwen/Qwen3-Embedding-0.6B
+```
+
+Or from Python:
+
+```python
+from scripts.scoring.cosine_distance import cosine_distance
+
+score = cosine_distance(text1, text2, model_name="Qwen/Qwen3-Embedding-0.6B")
+```
+
+### Soft N-Gram Score
+
+Measures how much of the edited text's phrase content is new relative to the source. Extracts word n-grams from both texts, embeds them, and computes what fraction of edited-text phrases have no semantic match in the source. Returns a value in [0, 1] where 0 = fully overlapping and 1 = no overlap.
+
+```bash
+python scripts/scoring/soft_ngrams.py \
+  --source_text "The original text" \
+  --edited_text "The edited text" \
+  --threshold 0.8 \
+  --min_length 6 \
+  --max_length 12
+```
+
+Or from Python:
+
+```python
+from scripts.scoring.soft_ngrams import soft_ngram_score
+
+score = soft_ngram_score(source_text, edited_text, threshold=0.8, min_length=6, max_length=12)
+```
+
 ## Citation
 If you use the code, dataset, or models mentioned in this repository, please cite our paper as follows:
 
