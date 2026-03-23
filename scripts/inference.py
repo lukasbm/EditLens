@@ -2,13 +2,13 @@
 Run EditLens inference on a HuggingFace dataset.
 
 Adds two columns to the dataset:
-  - bucket_pred: predicted bucket (int), 0 = human, n_buckets-1 = AI
-  - score_pred:  continuous score (float), weighted sum of bucket probabilities
+  - editlens_{base_model}_bucket:   predicted bucket (int), 0 = human, n_buckets-1 = AI
+  - editlens_{base_model}_score:    continuous score (float), weighted sum of bucket probabilities
 
 Usage:
   python inference.py \
-    --checkpoint /path/to/checkpoint \
-    --model_name FacebookAI/roberta-large \
+    --checkpoint pangram/editlens_roberta-large \
+    --base_model FacebookAI/roberta-large \
     --dataset pangram/editlens_iclr \
     --split test \
     --text_col text \
@@ -96,7 +96,7 @@ def infer_n_buckets(checkpoint: str) -> int:
 
 def run_inference(
     checkpoint_path: str,
-    model_name: str,
+    base_model_name: str,
     dataset_name_or_path: str,
     split: str = None,
     text_col: str = "text",
@@ -110,7 +110,7 @@ def run_inference(
     print(f"Inferred n_buckets={n_buckets} from checkpoint")
 
     # --- tokenizer ---
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.padding_side = "left"
@@ -128,7 +128,7 @@ def run_inference(
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
         base_model = AutoModelForSequenceClassification.from_pretrained(
-            model_name,
+            base_model_name,
             num_labels=n_buckets,
             quantization_config=quantization_config,
         )
@@ -203,8 +203,13 @@ def run_inference(
     score_preds = (probs @ bucket_labels) / (n_buckets - 1)
 
     # --- add columns to original (non-tokenized) dataset ---
-    ds = ds.add_column("bucket_pred", bucket_preds.tolist())
-    ds = ds.add_column("score_pred", score_preds.tolist())
+    # Derive a clean base-model tag: e.g. "FacebookAI/roberta-large" → "roberta_large"
+    base_model_tag = base_model_name.split("/")[-1]
+    bucket_col = f"editlens_{base_model_tag}_bucket"
+    score_col = f"editlens_{base_model_tag}_score"
+
+    ds = ds.add_column(bucket_col, bucket_preds.tolist())
+    ds = ds.add_column(score_col, score_preds.tolist())
 
     return ds
 
@@ -219,7 +224,7 @@ def main():
         help="Path to model checkpoint directory",
     )
     parser.add_argument(
-        "--model_name",
+        "--base_model",
         required=True,
         help="Base model name (e.g. FacebookAI/roberta-large)",
     )
@@ -266,7 +271,7 @@ def main():
 
     ds = run_inference(
         checkpoint_path=args.checkpoint,
-        model_name=args.model_name,
+        base_model_name=args.base_model,
         dataset_name_or_path=args.dataset,
         split=args.split,
         text_col=args.text_col,
@@ -275,9 +280,13 @@ def main():
         min_words=args.min_words,
     )
 
+    base_model_tag = args.base_model.split("/")[-1]
+    bucket_col = f"editlens_{base_model_tag}_bucket"
+    score_col = f"editlens_{base_model_tag}_score"
+
     print(f"\nInference complete. {len(ds)} examples processed.")
-    print(f"Bucket distribution: {np.bincount(ds['bucket_pred']).tolist()}")
-    print(f"Score stats: mean={np.mean(ds['score_pred']):.4f}, std={np.std(ds['score_pred']):.4f}")
+    print(f"Bucket distribution: {np.bincount(ds[bucket_col]).tolist()}")
+    print(f"Score stats: mean={np.mean(ds[score_col]):.4f}, std={np.std(ds[score_col]):.4f}")
 
     if args.output:
         if args.output.endswith(".jsonl"):
