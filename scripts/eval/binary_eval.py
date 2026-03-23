@@ -148,7 +148,13 @@ def run(
         if flipped:
             print(f"[{col}] Score direction flipped (original: higher = more human)")
 
-        val_scaled = minmax_scale(val_scores)
+        # Min-max scale using val's range, apply same to test
+        val_min, val_max = val_scores.min(), val_scores.max()
+        if val_max == val_min:
+            val_scaled = np.zeros_like(val_scores)
+        else:
+            val_scaled = (val_scores - val_min) / (val_max - val_min)
+
         threshold, val_f1 = find_optimal_threshold(val_scaled, val_binary)
         print(f"[{col}] Val calibration — F1: {val_f1:.3f}, threshold: {threshold:.4f}")
 
@@ -157,7 +163,11 @@ def run(
         test_scores = test_df[col].values
         if flipped:
             test_scores = -test_scores
-        test_scaled = minmax_scale(test_scores)
+
+        if val_max == val_min:
+            test_scaled = np.zeros_like(test_scores)
+        else:
+            test_scaled = (test_scores - val_min) / (val_max - val_min)
 
         preds = (test_scaled >= threshold).astype(int)
         metrics = evaluate(test_binary, preds)
