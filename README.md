@@ -35,8 +35,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun --nproc_per_node 8 scripts/train.p
 ## Inference
 
 Run inference on any HuggingFace dataset (remote or local). The script adds two columns to the output:
-- `bucket_pred`: predicted bucket (int)
-- `score_pred`: continuous score in [0, 1], the expected value of the bucket distribution
+- `editlens_<base_model>_bucket`: predicted bucket (int)
+- `editlens_<base_model>_score`: continuous score in [0, 1], the expected value of the bucket distribution
 
 ```bash
 python scripts/inference.py \
@@ -50,6 +50,57 @@ python scripts/inference.py \
 ```
 
 You can train an EditLens model with any number of classification buckets! This script will infer the num_buckets hyperparameter automatically from the model checkpoint.
+
+### Scoring Arbitrary Text
+
+Use `scripts/predict_text.py` to score text from standard input. The checkpoint
+and base model default to the pretrained RoBERTa-Large EditLens model, so no
+model arguments are required for the usual case:
+
+```bash
+printf '%s' 'Your text goes here.' \
+  | python scripts/predict_text.py
+```
+
+The command prints one JSON object per input document. Each result contains the
+normalized `score`, the `predicted_bucket`, and a probability `ranking` of all
+classification buckets. Documents can be provided in one invocation by
+separating them with an ASCII form-feed (`\f`):
+
+```bash
+printf 'First document.\fSecond document.' \
+  | python scripts/predict_text.py
+```
+
+The main options are:
+
+- `--checkpoint`: checkpoint name or path (default: `pangram/editlens_roberta-large`)
+- `--base_model`: base transformer name (default: `FacebookAI/roberta-large`)
+- `--max_length`: maximum transformer sequence length (default: `512`)
+- `--batch_size`: inference batch size (default: `4`)
+
+To obtain sentence-level signals, enable leave-one-sentence-out analysis:
+
+```bash
+cat document.txt \
+  | python scripts/predict_text.py --leave_one_sentence_out
+```
+
+The output then includes `sentence_attributions`. For each sentence:
+
+- `sentence_score` and `sentence_bucket` classify the sentence independently.
+- `sentence_bucket_probabilities` contains the full bucket distribution.
+- `score_delta` is the change in document score when that sentence is removed.
+
+A positive `score_delta` means that removing the sentence lowered the document
+score. Long documents are evaluated as sentence-preserving windows and their
+window probabilities are averaged. Leave-one-out mode is consequently more
+expensive because the document is rescored once for each sentence, and the
+sentence splitter is intended for ordinary prose rather than specialised
+citation-heavy text.
+
+The RoBERTa checkpoint can run on CPU. QLoRA adapter checkpoints require a
+compatible CUDA device and `bitsandbytes` installation.
 
 ## Scoring
 
