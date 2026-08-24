@@ -91,6 +91,10 @@ def leave_one_sentence_out(
         all_windows.extend(windows)
         boundaries.append((index, start, len(all_windows)))
     window_probabilities = score_texts(all_windows)
+    # Also score each sentence independently. This is intentionally reported
+    # alongside (rather than replacing) leave-one-out: standalone sentence
+    # scores are useful for highlighting, but omit document context.
+    sentence_probabilities = score_texts(sentences)
 
     aggregate: dict[int | None, np.ndarray] = {
         index: window_probabilities[start:end].mean(axis=0)
@@ -104,8 +108,15 @@ def leave_one_sentence_out(
         without = aggregate.get(index)
         if without is None:  # A one-sentence document has no non-empty variant.
             attributions.append(
-                {"sentence_index": index, "sentence": sentence, "score_without": None,
-                 "score_delta": None}
+                {
+                    "sentence_index": index,
+                    "sentence": sentence,
+                    "sentence_score": score_from_probabilities(sentence_probabilities[index]),
+                    "sentence_bucket": int(np.argmax(sentence_probabilities[index])),
+                    "sentence_bucket_probabilities": sentence_probabilities[index].tolist(),
+                    "score_without": None,
+                    "score_delta": None,
+                }
             )
             continue
         score_without = score_from_probabilities(without)
@@ -113,13 +124,16 @@ def leave_one_sentence_out(
             {
                 "sentence_index": index,
                 "sentence": sentence,
+                "sentence_score": score_from_probabilities(sentence_probabilities[index]),
+                "sentence_bucket": int(np.argmax(sentence_probabilities[index])),
+                "sentence_bucket_probabilities": sentence_probabilities[index].tolist(),
                 "score_without": score_without,
                 "score_delta": baseline_score - score_without,
             }
         )
 
     return {
-        "probabilities": baseline,
+        "probabilities": baseline.tolist(),
         "score": baseline_score,
         "n_windows": len(variants[0][1]),
         "sentence_attributions": attributions,

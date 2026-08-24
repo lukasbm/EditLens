@@ -1,0 +1,5 @@
+bucket description
+
+3 = fully ai
+0 = fully human
+

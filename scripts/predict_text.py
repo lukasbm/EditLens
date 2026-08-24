@@ -120,7 +120,7 @@ def main() -> None:
             loo = leave_one_sentence_out(
                 document, tokenizer, score_texts, args.max_length
             )
-            probs = loo["probabilities"]
+            probs = np.asarray(loo["probabilities"])
         else:
             probs = probabilities[index]
         ranking = sorted(
