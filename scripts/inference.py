@@ -119,6 +119,13 @@ def run_inference(
     is_qlora = is_qlora_checkpoint(checkpoint_path)
 
     if is_qlora:
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "This checkpoint is a QLoRA adapter, which requires a usable CUDA "
+                "device with bitsandbytes. The installed NVIDIA driver does not "
+                "support this PyTorch build. Use a full (non-QLoRA) checkpoint or "
+                "run in an environment with a compatible driver."
+            )
         from peft import PeftModel
         from transformers import BitsAndBytesConfig
 
@@ -184,7 +191,9 @@ def run_inference(
     training_args = TrainingArguments(
         output_dir="/tmp/editlens_inference",
         per_device_eval_batch_size=batch_size if not is_qlora else 4,
-        bf16=True,
+        # The script should also work on CPU-only machines.  bf16=True can make
+        # Trainer reject the run even though inference itself does not need CUDA.
+        bf16=torch.cuda.is_available(),
         report_to="none",
     )
 

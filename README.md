@@ -41,7 +41,7 @@ Run inference on any HuggingFace dataset (remote or local). The script adds two 
 ```bash
 python scripts/inference.py \
   --checkpoint pangram/editlens_roberta-large \
-  --model_name FacebookAI/roberta-large \
+  --base_model FacebookAI/roberta-large \
   --max_length 512 \
   --dataset pangram/editlens_iclr \
   --split test \
